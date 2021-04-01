@@ -1,0 +1,59 @@
+Nginx
+创建存储卷，便于 Nginx 和 Filebeat 容器共同挂载
+docker volume create nginx-log-volume
+
+启动 Nginx 容器，并且将存储卷映射到日志目录
+docker run -d --name nginx -p 80:80 -v nginx-log-volume:/var/log/nginx nginx:latest
+
+进入容器修改配置
+docker exec -it nginx /bin/bash
+
+由于容器环境下，默认的日志会输入到stdout，所以取消该设置并指定文件
+unlink /var/log/nginx/access.log
+unlink /var/log/nginx/error.log
+touch /var/log/nginx/access.log /var/log/nginx/error.log
+nginx -s reload
+
+
+
+
+Filebeat
+启动 Filebeat 容器，并且将存储卷映射到数据目录
+docker run -d --name filebeat --user=root -v nginx-log-volume:/data elastic/filebeat:7.9.2
+
+进入容器修改配置
+docker exec -it filebeat /bin/bash
+
+修改配置，添加 kafka 地址
+vi filebeat.yml
+
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+processors:
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+
+#输出源为kafka，下面配置 kafka 的连接地址和 topic
+output.kafka: 
+    hosts: ["",""]
+    topic: web_raw_log
+启用 Nginx 采集模块
+filebeat modules enable nginx
+
+编辑 Nginx 采集配置
+vi modules.d/nginx.yml
+
+- module: nginx
+  access:
+    enabled: true
+    var.paths: ["/data/access.log*"]
+  error:
+    enabled: true
+    var.paths: ["/data/error.log*"]
+
+
+重启 Filebeat 生效配置
+docker restart filebeat

@@ -1,0 +1,57 @@
+flume2kafka.cfg的详细内容如下：
+
+    #配置flume agent的source、channel、sink
+
+    a1.sources = r1
+
+    a1.channels = c1
+
+    a1.sinks=k1
+
+    #配置source
+
+    a1.sources.r1.type = exec
+
+    a1.sources.r1.command=tail -F/tmp/logs/kafka.log
+
+ 
+
+    # 配置channel
+
+    a1.channels.c1.type = memory
+
+    a1.channels.c1.capacity = 1000
+
+    a1.channels.c1.transactionCapacity = 100
+
+    #配置sink
+
+    a1.sinks.k1.channel = c1
+
+    a1.sinks.k1.type =org.apache.flume.sink.kafka.KafkaSink
+
+    #设置Kafka的Topic
+
+    a1.sinks.k1.kafka.topic = mytest
+
+    #设置Kafka的broker地址和端口号
+
+    a1.sinks.k1.kafka.bootstrap.servers = s201:9092,s202:9092,s203:9092
+
+    #配置批量提交的数量
+
+    a1.sinks.k1.kafka.flumeBatchSize = 20
+
+    a1.sinks.k1.kafka.producer.acks = 1
+
+    a1.sinks.k1.kafka.producer.linger.ms = 1
+
+    a1.sinks.ki.kafka.producer.compression.type= snappy
+
+ 
+
+    # 绑定source和sink 到channel
+
+    a1.sources.r1.channels = c1
+
+    a1.sinks.k1.channel=c1
